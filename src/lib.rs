@@ -71,3 +71,13 @@ pub fn run(params: Params) -> Result<(), Box<dyn Error>> {
   
   Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn run_result() {        
+        assert_eq!(2, 2);
+    }
+}
