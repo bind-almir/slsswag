@@ -39,6 +39,11 @@ fn read_template(name: &str) -> String {
   std::str::from_utf8(template.data.as_ref()).unwrap().to_string()
 }
 
+fn parse_yml(input: &str) -> Result<serde_yaml::Value, Box<dyn Error>> {
+  let yml = fs::read_to_string(input)?;
+  Ok(serde_yaml::from_str(&yml)?)
+}
+
 // write the output to the serverless.yml file
 fn write_output(path: &str, content: &str) -> Result<(), Box<dyn Error>> {
   let mut file = fs::File::create(path)?;
