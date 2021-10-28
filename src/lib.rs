@@ -2,6 +2,7 @@ use std::io::Write;
 use std::error::Error;
 use rust_embed::RustEmbed;
 use std::fs;
+use regex::Regex;
 
 const OUTPUT: &str = "serverless.yml";
 
@@ -39,8 +40,8 @@ fn read_template(name: &str) -> String {
     std::str::from_utf8(template.data.as_ref()).unwrap().to_string()
 }
 
-fn parse_swagger(input: &str) -> Result<(), Box<dyn Error>> {
-    let yml = fs::read_to_string(input)?;
+fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
+    let yml = fs::read_to_string(params.input)?;
 
     let value: serde_yaml::Value = serde_yaml::from_str(&yml).unwrap();
 
@@ -49,17 +50,54 @@ fn parse_swagger(input: &str) -> Result<(), Box<dyn Error>> {
         .ok_or("paths is not a mapping or malformed")?;
 
     for (path, methods) in paths {
-        println!("{:?}", path);
         for (method, _method_value) in methods.as_mapping().unwrap() {
-            println!("{:?}", method);
             // println!("{:?}", method_value["produces"]);
             // println!("{:?}", method_value["consumes"]);
-
+            
+            let s = parse_nodejs(&path, &method);
+            println!("{}", s);
         }
-        
     }
 
     Ok(())
+}
+
+fn parse_nodejs(path: &serde_yaml::Value, method: &serde_yaml::Value) -> String {
+    let mut nodejs_fn = read_template("nodejs-function.yml");
+    let mut str_method = String::new();
+    let mut str_path = String::new();            
+
+    match method {
+        serde_yaml::Value::String(value) => {
+            str_method = value.clone();
+            nodejs_fn = nodejs_fn.replace("[method]", value)
+
+        },
+        _ =>  nodejs_fn = "get".to_string(),
+    };
+
+    match path {
+        serde_yaml::Value::String(value) => {                    
+            str_path = value.clone();
+            nodejs_fn = nodejs_fn.replace("[path]", value)
+        },
+        _ =>  nodejs_fn = "/".to_string(),
+    };
+
+    let mut function_name: String = str_path.to_owned();
+    function_name.push_str(&str_method);
+
+
+    let reg = Regex::new(r"/").unwrap();
+    let function_name = reg.replace_all(&function_name, "");
+
+    let reg = Regex::new(r"[^A-Za-z0-9]+").unwrap();
+
+    let function_name = reg.replace_all(&function_name, "-");
+    nodejs_fn = nodejs_fn.replace("[function-name]", &function_name);
+
+    nodejs_fn
+
 }
 
 // write the output to the serverless.yml file
@@ -87,9 +125,7 @@ pub fn run(params: Params) -> Result<(), Box<dyn Error>> {
         println!("{}", e);
     }
 
-
-    println!("{}", &params.input);
-    parse_swagger(&params.input)?;
+    parse_swagger(params)?;
     
     Ok(())
 }

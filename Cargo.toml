@@ -9,3 +9,4 @@ edition = "2021"
 rust-embed="6.2.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
+regex = "1.5"
