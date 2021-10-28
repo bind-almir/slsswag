@@ -2,5 +2,21 @@ service: your-service-name-here
 
 provider:
   name: aws
+  stage: dev
   runtime: nodejs14.x
   lambdaHashingVersion: 20201221
+
+custom: 
+
+  # documentation:
+  #   api:
+  #     ${file(./docs/api.yml)}
+  #   models:
+  #     ${file(./docs/models.yml)}
+
+plugins:
+  # TODO: setup documentation
+  # - serverless-v2-aws-documentation
+  - serverless-offline
+
+functions:
