@@ -98,6 +98,14 @@ fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value) -> String {
     let function_name = reg.replace_all(&function_name, "-");
     std_fn = std_fn.replace("[function-name]", &function_name);
 
+    let mut function_handler = String::new();
+    function_handler.push_str("functions/");
+    function_handler.push_str(&function_name);
+    function_handler.push_str(".js");
+
+    std_fn = std_fn.replace("[function-handler]", &function_handler);
+
+
     std_fn
 
 }
@@ -119,7 +127,9 @@ fn write_output(path: &str, content: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn setup_output() -> Result<(), Box<dyn Error>> {
-    fs::create_dir_all("./output/")?;
+    fs::create_dir_all("./output/functions")?;
+    fs::create_dir_all("./output/docs")?;
+
     File::create(OUTPUT)?;
     Ok(())
 }
@@ -133,8 +143,14 @@ pub fn run(params: Params) -> Result<(), Box<dyn Error>> {
     let content: &mut String = &mut String::new();
 
     if params.runtime == "nodejs" {
+        // setup nodejs project
+        let package = read_template("package.json");
+        let pck_json = "output/package.json";
+        File::create(&pck_json)?;
+        write_output(&pck_json, &package)?;
         *content = read_template("base-nodejs.yml");
     } else if params.runtime == "csharp" {
+        // TODO: setup csharp project
         *content = read_template("base-csharp.yml");
     } else {
         panic!("runtime must be nodejs or csharp");
