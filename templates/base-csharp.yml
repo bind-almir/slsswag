@@ -6,3 +6,6 @@ provider:
   name: aws
   runtime: dotnetcore3.1
   lambdaHashingVersion: 20201221
+
+functions:
+

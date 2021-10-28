@@ -1,0 +1,7 @@
+  [function-name]:
+    handler: [function-handler]
+    events:
+      - http:
+          method: [method]
+          path: [path]
+          cors: true

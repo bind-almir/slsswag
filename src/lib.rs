@@ -9,7 +9,6 @@ const OUTPUT: &str = "serverless.yml";
 #[folder = "templates/"]
 struct Asset;
 
-
 // input arguments
 pub struct Params {
   pub input: String,
@@ -40,9 +39,27 @@ fn read_template(name: &str) -> String {
     std::str::from_utf8(template.data.as_ref()).unwrap().to_string()
 }
 
-fn parse_yml(input: &str) -> Result<serde_yaml::Value, Box<dyn Error>> {
+fn parse_swagger(input: &str) -> Result<(), Box<dyn Error>> {
     let yml = fs::read_to_string(input)?;
-    Ok(serde_yaml::from_str(&yml)?)
+
+    let value: serde_yaml::Value = serde_yaml::from_str(&yml).unwrap();
+
+    let paths: &serde_yaml::Mapping = value["paths"]
+        .as_mapping()
+        .ok_or("paths is not a mapping or malformed")?;
+
+    for (path, methods) in paths {
+        println!("{:?}", path);
+        for (method, _method_value) in methods.as_mapping().unwrap() {
+            println!("{:?}", method);
+            // println!("{:?}", method_value["produces"]);
+            // println!("{:?}", method_value["consumes"]);
+
+        }
+        
+    }
+
+    Ok(())
 }
 
 // write the output to the serverless.yml file
@@ -72,7 +89,7 @@ pub fn run(params: Params) -> Result<(), Box<dyn Error>> {
 
 
     println!("{}", &params.input);
-    parse_yml(&params.input)?;
+    parse_swagger(&params.input)?;
     
     Ok(())
 }
