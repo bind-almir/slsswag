@@ -56,7 +56,7 @@ fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
             // println!("{:?}", method_value["produces"]);
             // println!("{:?}", method_value["consumes"]);
             
-            let s = parse_yml(&path, &method);
+            let s = parse_yml(&path, &method, &params);
             write_output(OUTPUT, &s).expect("Error writing to the output file");
         }
     }
@@ -64,7 +64,7 @@ fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value) -> String {
+fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value, params: &Params) -> String {
     let mut std_fn = read_template("function.yml");
     let mut str_method = String::new();
     let mut str_path = String::new();            
@@ -98,13 +98,21 @@ fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value) -> String {
     let function_name = reg.replace_all(&function_name, "-");
     std_fn = std_fn.replace("[function-name]", &function_name);
 
-    let mut function_handler = String::new();
-    function_handler.push_str("functions/");
-    function_handler.push_str(&function_name);
-    function_handler.push_str(".js");
-
-    std_fn = std_fn.replace("[function-handler]", &function_handler);
-
+    if params.runtime == "nodejs" {
+        let mut function_handler = String::new();
+        function_handler.push_str("functions/");
+        function_handler.push_str(&function_name);
+        let mut function_file = function_handler.clone();
+        function_file.push_str(".js");
+        function_handler.push_str(".handler");    
+        std_fn = std_fn.replace("[function-handler]", &function_handler);
+        let mut node_fn_dest = String::new();
+        node_fn_dest.push_str("output/");
+        node_fn_dest.push_str(&function_file);
+        copy_template("node-function.js", &node_fn_dest).expect("Error copying the node function");
+    } else if params.runtime == "csharp" {
+        // TODO: implement csharp
+    }
 
     std_fn
 
@@ -128,9 +136,17 @@ fn write_output(path: &str, content: &str) -> Result<(), Box<dyn Error>> {
 
 fn setup_output() -> Result<(), Box<dyn Error>> {
     fs::create_dir_all("./output/functions")?;
+    fs::create_dir_all("./output/helpers")?;
     fs::create_dir_all("./output/docs")?;
 
     File::create(OUTPUT)?;
+    Ok(())
+}
+
+fn copy_template(name: &str, dest: &str) -> Result<(), Box<dyn Error>> {
+    let content = read_template(name);
+    File::create(&dest)?;
+    write_output(&dest, &content)?;
     Ok(())
 }
 
@@ -144,10 +160,8 @@ pub fn run(params: Params) -> Result<(), Box<dyn Error>> {
 
     if params.runtime == "nodejs" {
         // setup nodejs project
-        let package = read_template("package.json");
-        let pck_json = "output/package.json";
-        File::create(&pck_json)?;
-        write_output(&pck_json, &package)?;
+        copy_template("package.json", "output/package.json")?;
+        copy_template("node-response.js", "output/helpers/parse-response.js")?;
         *content = read_template("base-nodejs.yml");
     } else if params.runtime == "csharp" {
         // TODO: setup csharp project
