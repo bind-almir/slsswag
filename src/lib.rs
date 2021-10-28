@@ -1,10 +1,12 @@
+use std::fs::File;
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::error::Error;
 use rust_embed::RustEmbed;
 use std::fs;
 use regex::Regex;
 
-const OUTPUT: &str = "serverless.yml";
+const OUTPUT: &str = "output/serverless.yml";
 
 #[derive(RustEmbed)]
 #[folder = "templates/"]
@@ -41,7 +43,7 @@ fn read_template(name: &str) -> String {
 }
 
 fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
-    let yml = fs::read_to_string(params.input)?;
+    let yml = fs::read_to_string(&params.input)?;
 
     let value: serde_yaml::Value = serde_yaml::from_str(&yml).unwrap();
 
@@ -54,34 +56,34 @@ fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
             // println!("{:?}", method_value["produces"]);
             // println!("{:?}", method_value["consumes"]);
             
-            let s = parse_nodejs(&path, &method);
-            println!("{}", s);
+            let s = parse_yml(&path, &method);
+            write_output(OUTPUT, &s).expect("Error writing to the output file");
         }
     }
 
     Ok(())
 }
 
-fn parse_nodejs(path: &serde_yaml::Value, method: &serde_yaml::Value) -> String {
-    let mut nodejs_fn = read_template("nodejs-function.yml");
+fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value) -> String {
+    let mut std_fn = read_template("function.yml");
     let mut str_method = String::new();
     let mut str_path = String::new();            
 
     match method {
         serde_yaml::Value::String(value) => {
             str_method = value.clone();
-            nodejs_fn = nodejs_fn.replace("[method]", value)
+            std_fn = std_fn.replace("[method]", value)
 
         },
-        _ =>  nodejs_fn = "get".to_string(),
+        _ =>  std_fn = "get".to_string(),
     };
 
     match path {
         serde_yaml::Value::String(value) => {                    
             str_path = value.clone();
-            nodejs_fn = nodejs_fn.replace("[path]", value)
+            std_fn = std_fn.replace("[path]", value)
         },
-        _ =>  nodejs_fn = "/".to_string(),
+        _ =>  std_fn = "/".to_string(),
     };
 
     let mut function_name: String = str_path.to_owned();
@@ -94,21 +96,39 @@ fn parse_nodejs(path: &serde_yaml::Value, method: &serde_yaml::Value) -> String 
     let reg = Regex::new(r"[^A-Za-z0-9]+").unwrap();
 
     let function_name = reg.replace_all(&function_name, "-");
-    nodejs_fn = nodejs_fn.replace("[function-name]", &function_name);
+    std_fn = std_fn.replace("[function-name]", &function_name);
 
-    nodejs_fn
+    std_fn
 
 }
 
 // write the output to the serverless.yml file
 fn write_output(path: &str, content: &str) -> Result<(), Box<dyn Error>> {
-    let mut file = fs::File::create(path)?;
-    file.write_all(content.as_bytes())?;
+    
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(path)
+        .unwrap();
+
+    if let Err(e) = writeln!(file, "{}\n", content) {
+        eprintln!("Error writing to file: {}", e);
+    }
+
+    Ok(())
+}
+
+fn setup_output() -> Result<(), Box<dyn Error>> {
+    fs::create_dir_all("./output/")?;
+    File::create(OUTPUT)?;
     Ok(())
 }
 
 // main function
 pub fn run(params: Params) -> Result<(), Box<dyn Error>> {
+
+    // create output directory and files
+    setup_output()?;
 
     let content: &mut String = &mut String::new();
 

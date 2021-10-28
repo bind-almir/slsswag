@@ -8,4 +8,3 @@ provider:
   lambdaHashingVersion: 20201221
 
 functions:
-
