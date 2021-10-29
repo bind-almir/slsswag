@@ -107,6 +107,8 @@ fn create_docs(info: &serde_yaml::Value, definitions: &serde_yaml::Value) -> Res
         let mut model_definition: String = "- \n  ".to_owned();
         model_definition.push_str("name: ");
         model_definition.push_str(&str_model);
+        // TODO get this from path definition
+        model_definition.push_str("\n  contentType: 'application/json'");
         model_definition.push_str("\n  schema: ");
         str_model_value = str_model_value.replace("\n", "\n    ");
         model_definition.push_str(&str_model_value);
