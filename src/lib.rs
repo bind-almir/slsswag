@@ -61,6 +61,61 @@ fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
         }
     }
 
+    // general api info
+    let info = &value["info"];
+    // models defined in the swagger
+    let definitions = &value["definitions"];
+
+    create_docs(&info, &definitions)?;
+
+    Ok(())
+}
+
+fn create_docs(info: &serde_yaml::Value, definitions: &serde_yaml::Value) -> Result<(), Box<dyn Error>> {
+    const API_YML: &str = "output/docs/api.yml";
+    const MODELS_YML: &str = "output/docs/models.yml";
+
+    File::create(API_YML)?;
+    File::create(MODELS_YML)?;
+    
+    // add info into api.yml
+    let mut str_info = "info:".to_owned();
+    let mut info_indented = serde_yaml::to_string(&info)?;
+    info_indented = info_indented.replace("\n", "\n  ");
+    info_indented = info_indented.replace("---", "");
+    str_info.push_str(&info_indented.to_string());
+    write_output(API_YML, &str_info).expect("Error writing to the output api.yml file");
+
+    // add definitions into models.yml
+    for (model, model_value) in definitions.as_mapping().unwrap() {
+        let str_model: String;
+        let mut str_model_value: String;
+        match model {
+            serde_yaml::Value::String(value) => {
+                str_model = value.clone();    
+            },
+            _ =>  str_model = "".to_string(),
+        };
+
+        match model_value {
+            serde_yaml::Value::Mapping(value) => {
+                str_model_value = serde_yaml::to_string(&value)?;
+            },
+            _ =>  str_model_value = "".to_string(),
+        };
+
+        let mut model_definition: String = "- \n  ".to_owned();
+        model_definition.push_str("name: ");
+        model_definition.push_str(&str_model);
+        model_definition.push_str("\n  schema: ");
+        str_model_value = str_model_value.replace("\n", "\n    ");
+        model_definition.push_str(&str_model_value);
+        model_definition = model_definition.replace("---", "");
+
+        write_output(MODELS_YML, &model_definition).expect("Error writing to the output models.yml file");
+    }
+    
+
     Ok(())
 }
 
