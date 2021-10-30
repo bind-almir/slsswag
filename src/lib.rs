@@ -61,45 +61,12 @@ fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
         }
     }
 
-
     // add general api info into api.yml
     create_api_yaml(&value["info"])?;
     // add models defined in the swagger into models.yml
     create_models_yml(&value["definitions"])?;
 
     Ok(())
-}
-
-fn update_model_ref(model_ref: String) -> String {
-    let mut updated_ref = "{{".to_owned(); 
-    updated_ref.push_str(model_ref.replace("#/definitions/", "").as_str());
-    updated_ref.push_str("}}");
-    return updated_ref;
-}
-
-fn traverse_model_map(mut model_map: serde_yaml::Mapping) -> serde_yaml::Value {
-    let map = model_map.clone();
-    for (key, value) in map {
-        if value.is_mapping() {
-            traverse_model_map(value.as_mapping().unwrap().clone());
-        } else {
-            if key == "$ref" {
-                let mut mut_model_value: serde_yaml::Value = model_map[&key].clone();
-                match mut_model_value {
-                    serde_yaml::Value::String(ref mut s) => {
-                        *s = update_model_ref(s.to_string());
-                        model_map[&key] = serde_yaml::Value::String(s.to_string());
-                        println!("{:?}", model_map[&key]);
-                    },
-                    _ => {
-                        println!("{:?}", mut_model_value);
-                    }
-                }
-
-            }
-        }
-    }
-    serde_yaml::Value::Mapping(model_map)
 }
 
 fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Error>> {
@@ -116,12 +83,6 @@ fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Erro
             },
             _ =>  str_model = "".to_string(),
         };
-
-        let model_map = model_value
-            .as_mapping()
-            .ok_or("model is not a mapping or malformed")?;
-
-        let model_value: serde_yaml::Value = traverse_model_map(model_map.clone());
 
         match model_value {
             serde_yaml::Value::Mapping(value) => {
@@ -140,10 +101,30 @@ fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Erro
         model_definition.push_str(&str_model_value);
         model_definition = model_definition.replace("---", "");
 
-        write_output(MODELS_YML, &model_definition).expect("Error writing to the output models.yml file");
+        // TODO: LEARN RUST fix this hack! /1
+        model_definition = model_definition.replace("#/definitions/", "{{model:");
+
+        let mut lines = String::new();
+        for ln in model_definition.lines() {
+            if ln.contains("{{model:") {
+                let mut updated_line = ln.to_owned();
+                updated_line = updated_line[0..updated_line.len() - 1].to_string();
+                // updated_line = updated_line.replace(ln, "#/definitions/");
+                updated_line.push_str("}}\"\n");
+                lines.push_str(&updated_line);
+
+            } else {
+                lines.push_str(ln);
+                lines.push_str("\n");
+            }
+        }
+
+        write_output(MODELS_YML, &lines).expect("Error writing to the output models.yml file");
+
     }
     Ok(())
 }
+
 
 fn create_api_yaml(info: &serde_yaml::Value) -> Result<(), Box<dyn Error>>  {
     const API_YML: &str = "output/docs/api.yml";
