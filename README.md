@@ -20,4 +20,4 @@ Sample folder contains [petstore swagger file](https://petstore.swagger.io/). On
 Suppose you have your legacy application with the OpenAPI specification. If you plan to migrate to the Serverless framework and run on AWS, export the file, then run the command against your file. 
 
 # Important note:
-API Gateway documentation does not support `xml` and` example` tags, therefore you need to remove it from the generated Swagger (if any). 
+API Gateway documentation does not support `XML and` example` tags. Therefore you need to remove it from the generated Swagger (if any). 
