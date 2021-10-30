@@ -70,6 +70,38 @@ fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn update_model_ref(model_ref: String) -> String {
+    let mut updated_ref = "{{".to_owned(); 
+    updated_ref.push_str(model_ref.replace("#/definitions/", "").as_str());
+    updated_ref.push_str("}}");
+    return updated_ref;
+}
+
+fn traverse_model_map(mut model_map: serde_yaml::Mapping) -> serde_yaml::Value {
+    let map = model_map.clone();
+    for (key, value) in map {
+        if value.is_mapping() {
+            traverse_model_map(value.as_mapping().unwrap().clone());
+        } else {
+            if key == "$ref" {
+                let mut mut_model_value: serde_yaml::Value = model_map[&key].clone();
+                match mut_model_value {
+                    serde_yaml::Value::String(ref mut s) => {
+                        *s = update_model_ref(s.to_string());
+                        model_map[&key] = serde_yaml::Value::String(s.to_string());
+                        println!("{:?}", model_map[&key]);
+                    },
+                    _ => {
+                        println!("{:?}", mut_model_value);
+                    }
+                }
+
+            }
+        }
+    }
+    serde_yaml::Value::Mapping(model_map)
+}
+
 fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Error>> {
 
     const MODELS_YML: &str = "output/docs/models.yml";
@@ -84,6 +116,12 @@ fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Erro
             },
             _ =>  str_model = "".to_string(),
         };
+
+        let model_map = model_value
+            .as_mapping()
+            .ok_or("model is not a mapping or malformed")?;
+
+        let model_value: serde_yaml::Value = traverse_model_map(model_map.clone());
 
         match model_value {
             serde_yaml::Value::Mapping(value) => {
@@ -119,11 +157,11 @@ fn create_api_yaml(info: &serde_yaml::Value) -> Result<(), Box<dyn Error>>  {
     Ok(())
 }
 
-fn create_docs() -> Result<(), Box<dyn Error>> {
+// fn create_docs() -> Result<(), Box<dyn Error>> {
 
-    
-    Ok(())
-}
+//      TODO Add docs to functions 
+//     Ok(())
+// }
 
 fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value, params: &Params) -> String {
     let mut std_fn = read_template("function.yml");
