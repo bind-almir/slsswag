@@ -83,6 +83,26 @@ fn parse_swagger(params: &Params) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn replace_model_references(model_definition: &str) -> String {
+    let new_model_definition = &model_definition.replace("#/definitions/", "{{model:");
+
+    let mut lines = String::new();
+    for ln in new_model_definition.lines() {
+        if ln.contains("{{model:") {
+            let mut updated_line = ln.to_owned();
+            updated_line = updated_line[0..updated_line.len() - 1].to_string();
+            // updated_line = updated_line.replace(ln, "#/definitions/");
+            updated_line.push_str("}}\"\n");
+            lines.push_str(&updated_line);
+
+        } else {
+            lines.push_str(ln);
+            lines.push_str("\n");
+        }
+    }
+    lines
+}
+
 fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Error>> {
 
     const MODELS_YML: &str = "output/docs/models.yml";
@@ -116,24 +136,9 @@ fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Erro
         model_definition = model_definition.replace("---", "");
 
         // TODO: LEARN RUST fix this hack! /1
-        model_definition = model_definition.replace("#/definitions/", "{{model:");
+        model_definition = replace_model_references(&model_definition);
 
-        let mut lines = String::new();
-        for ln in model_definition.lines() {
-            if ln.contains("{{model:") {
-                let mut updated_line = ln.to_owned();
-                updated_line = updated_line[0..updated_line.len() - 1].to_string();
-                // updated_line = updated_line.replace(ln, "#/definitions/");
-                updated_line.push_str("}}\"\n");
-                lines.push_str(&updated_line);
-
-            } else {
-                lines.push_str(ln);
-                lines.push_str("\n");
-            }
-        }
-
-        write_output(MODELS_YML, &lines).expect("Error writing to the output models.yml file");
+        write_output(MODELS_YML, &model_definition).expect("Error writing to the output models.yml file");
 
     }
     Ok(())
@@ -211,7 +216,7 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
                 doc.push_str("\n");
                 if response["schema"] != serde_yaml::Value::Null {
                     let mut s = serde_yaml::to_string(&response["schema"])?;
-                    doc.push_str("    schema:");
+                    doc.push_str("    responseModels:");
                     s = s.replace("\n", "\n      ");
                     doc.push_str(&s);
                     doc.push_str("\n");
@@ -222,6 +227,10 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
         _ => {},
     }
     
+    doc = doc.replace("#/definitions/", "");
+    doc = doc.replace("$ref", "application/json");
+
+
     write_output(&file, &doc)?;
 
     //  TODO Add docs to functions 
@@ -236,19 +245,6 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
 //     description: "The identifier parent."
 //     required: true
 
-// methodResponses:
-//   -
-//     statusCode: "200"
-//     responseModels:
-//       "application/json": "OrganizationResponse"
-//   -
-//     statusCode: "400"
-//     responseModels:
-//       "application/json": "ErrorResponse"
-//   -
-//     statusCode: "404"
-//     responseModels:
-//       "application/json": "ErrorResponse"
     Ok(())
 }
 
