@@ -5,3 +5,5 @@
           method: [method]
           path: [path]
           cors: true
+          documentation:
+            ${file([function-doc-path])} 

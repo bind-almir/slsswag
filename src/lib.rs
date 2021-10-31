@@ -7,6 +7,7 @@ use std::fs;
 use regex::Regex;
 
 const OUTPUT: &str = "output/serverless.yml";
+const FUNCTION_DOC_BASE_PATH: &str = "output/docs/functions/";
 
 #[derive(RustEmbed)]
 #[folder = "templates/"]
@@ -189,6 +190,10 @@ fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value, params: &Para
         let mut node_fn_dest = String::new();
         node_fn_dest.push_str("output/");
         node_fn_dest.push_str(&function_file);
+        let mut function_doc_path = String::from(FUNCTION_DOC_BASE_PATH);
+        function_doc_path.push_str(&function_name);
+        function_doc_path.push_str(".yml");
+        std_fn = std_fn.replace("[function-doc-path]", &function_doc_path);
         copy_template("node-function.js", &node_fn_dest).expect("Error copying the node function");
     } else if params.runtime == "csharp" {
         // TODO: implement csharp
