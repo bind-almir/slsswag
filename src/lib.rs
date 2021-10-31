@@ -127,6 +127,11 @@ fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Erro
 }
 
 
+fn create_fn_doc_yaml(file: &str) -> Result<(), Box<dyn Error>> {
+    File::create(file)?;
+    Ok(())
+}
+
 fn create_api_yaml(info: &serde_yaml::Value) -> Result<(), Box<dyn Error>>  {
     const API_YML: &str = "output/docs/api.yml";
     File::create(API_YML)?;
@@ -194,6 +199,8 @@ fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value, params: &Para
         function_doc_path.push_str(&function_name);
         function_doc_path.push_str(".yml");
         std_fn = std_fn.replace("[function-doc-path]", &function_doc_path);
+        println!("{}", &function_doc_path);
+        create_fn_doc_yaml(&function_doc_path).expect("Error creating function yaml doc file");
         copy_template("node-function.js", &node_fn_dest).expect("Error copying the node function");
     } else if params.runtime == "csharp" {
         // TODO: implement csharp
@@ -222,8 +229,7 @@ fn write_output(path: &str, content: &str) -> Result<(), Box<dyn Error>> {
 fn setup_output() -> Result<(), Box<dyn Error>> {
     fs::create_dir_all("./output/functions")?;
     fs::create_dir_all("./output/helpers")?;
-    fs::create_dir_all("./output/docs")?;
-
+    fs::create_dir_all("./output/docs/functions")?;
     File::create(OUTPUT)?;
     Ok(())
 }
