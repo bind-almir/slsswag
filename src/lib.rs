@@ -157,9 +157,11 @@ fn create_api_yaml(info: &serde_yaml::Value) -> Result<(), Box<dyn Error>>  {
     Ok(())
 }
 
+
 fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
-    let (_path, method, _params, method_value) = (&yaml.path, &yaml.method, &yaml.params, &yaml.method_value);
+    let (path, method, _params, method_value) = (&yaml.path, &yaml.method, &yaml.params, &yaml.method_value);
     let mut doc = String::new();
+    
     doc.push_str("summary: ");
     doc.push_str(method_value["summary"].as_str().unwrap());
     doc.push_str("\n");
@@ -167,6 +169,7 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
     doc.push_str(method_value["description"].as_str().unwrap());
     doc.push_str("\n");
     doc.push_str("tags: \n");
+    
     match &method_value["tags"] {
         serde_yaml::Value::Sequence(tags) => {
             for tag in tags {
@@ -177,17 +180,52 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
         },
         _ => {},
     };
+
+    match method {
+        serde_yaml::Value::String(value) => {
+            doc.push_str("method: ");
+            doc.push_str(value);
+            doc.push_str("\n");        },
+        _ =>  println!("method not found "),
+    };
+
+    match path {
+        serde_yaml::Value::String(value) => {                    
+            doc.push_str("path: ");
+            doc.push_str(value);
+            doc.push_str("\n");
+        },
+        _ =>  println!("path not found "),
+    };
+
+    doc.push_str("methodResponses: \n");
+
+    match &method_value["responses"] {
+        serde_yaml::Value::Mapping(responses) => {
+            for (code, response) in responses {
+                doc.push_str("  ");
+                doc.push_str(code.as_str().unwrap());
+                doc.push_str(": \n");
+                doc.push_str("    description: ");
+                doc.push_str(response["description"].as_str().unwrap());
+                doc.push_str("\n");
+                if response["schema"] != serde_yaml::Value::Null {
+                    let mut s = serde_yaml::to_string(&response["schema"])?;
+                    doc.push_str("    schema:");
+                    s = s.replace("\n", "\n      ");
+                    doc.push_str(&s);
+                    doc.push_str("\n");
+                    doc = doc.replace("---", "");
+                }
+            }
+        },
+        _ => {},
+    }
     
-    println!("{:?}", method);
     write_output(&file, &doc)?;
 
     //  TODO Add docs to functions 
-// summary: "/OrganizationLink/{idChild}/{idParent}"
-// description: "/OrganizationLink/{idChild}/{idParent}"
-// tags:
-//   - OrganizationLink
-// method: get
-// path: /OrganizationLink/{idChild}/{idParent}
+
 // pathParams:
 //   -
 //     name: "id"
