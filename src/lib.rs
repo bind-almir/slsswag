@@ -19,6 +19,13 @@ pub struct Params {
   pub runtime: String
 }
 
+struct Yaml {
+    path: serde_yaml::Value, 
+    method: serde_yaml::Value, 
+    params: Params, 
+    method_value: serde_yaml::Value
+}
+
 // parse input arguments and return a Params struct
 impl Params {
     pub fn new(args: &[String]) -> Result<Params, &str> {
@@ -43,7 +50,7 @@ fn read_template(name: &str) -> String {
     std::str::from_utf8(template.data.as_ref()).unwrap().to_string()
 }
 
-fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
+fn parse_swagger(params: &Params) -> Result<(), Box<dyn Error>> {
     let yml = fs::read_to_string(&params.input)?;
 
     let value: serde_yaml::Value = serde_yaml::from_str(&yml).unwrap();
@@ -53,11 +60,17 @@ fn parse_swagger(params: Params) -> Result<(), Box<dyn Error>> {
         .ok_or("paths is not a mapping or malformed")?;
 
     for (path, methods) in paths {
-        for (method, _method_value) in methods.as_mapping().unwrap() {
-            // println!("{:?}", method_value["produces"]);
-            // println!("{:?}", method_value["consumes"]);
-            
-            let s = parse_yml(&path, &method, &params);
+        for (method, method_value) in methods.as_mapping().unwrap() {
+             let yaml: Yaml = Yaml {
+                path: path.clone(),
+                method: method.clone(),
+                params: Params {
+                    input: params.input.clone(),
+                    runtime: params.runtime.clone()
+                },
+                method_value: method_value.clone()
+            };
+            let s = parse_yml(yaml);
             write_output(OUTPUT, &s).expect("Error writing to the output file");
         }
     }
@@ -144,13 +157,68 @@ fn create_api_yaml(info: &serde_yaml::Value) -> Result<(), Box<dyn Error>>  {
     Ok(())
 }
 
-// fn create_docs() -> Result<(), Box<dyn Error>> {
+fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
+    let (_path, method, _params, method_value) = (&yaml.path, &yaml.method, &yaml.params, &yaml.method_value);
+    let mut doc = String::new();
+    doc.push_str("summary: ");
+    doc.push_str(method_value["summary"].as_str().unwrap());
+    doc.push_str("\n");
+    doc.push_str("description: ");
+    doc.push_str(method_value["description"].as_str().unwrap());
+    doc.push_str("\n");
+    doc.push_str("tags: \n");
+    match &method_value["tags"] {
+        serde_yaml::Value::Sequence(tags) => {
+            for tag in tags {
+                doc.push_str("  - ");
+                doc.push_str(tag.as_str().unwrap());
+                doc.push_str("\n");
+            }
+        },
+        _ => {},
+    };
+    
+    println!("{:?}", method);
+    write_output(&file, &doc)?;
 
-//      TODO Add docs to functions 
-//     Ok(())
-// }
+    //  TODO Add docs to functions 
+// summary: "/OrganizationLink/{idChild}/{idParent}"
+// description: "/OrganizationLink/{idChild}/{idParent}"
+// tags:
+//   - OrganizationLink
+// method: get
+// path: /OrganizationLink/{idChild}/{idParent}
+// pathParams:
+//   -
+//     name: "id"
+//     description: "The identifier child."
+//     required: true
+//   -
+//     name: "idParent"
+//     description: "The identifier parent."
+//     required: true
 
-fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value, params: &Params) -> String {
+// methodResponses:
+//   -
+//     statusCode: "200"
+//     responseModels:
+//       "application/json": "OrganizationResponse"
+//   -
+//     statusCode: "400"
+//     responseModels:
+//       "application/json": "ErrorResponse"
+//   -
+//     statusCode: "404"
+//     responseModels:
+//       "application/json": "ErrorResponse"
+    Ok(())
+}
+
+
+fn parse_yml(yaml: Yaml) -> String {
+
+    let (path, method, params, _method_value) = (&yaml.path, &yaml.method, &yaml.params, &yaml.method_value);
+
     let mut std_fn = read_template("function.yml");
     let mut str_method = String::new();
     let mut str_path = String::new();            
@@ -175,7 +243,6 @@ fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value, params: &Para
     let mut function_name: String = str_path.to_owned();
     function_name.push_str(&str_method);
 
-
     let reg = Regex::new(r"/").unwrap();
     let function_name = reg.replace_all(&function_name, "");
 
@@ -185,23 +252,29 @@ fn parse_yml(path: &serde_yaml::Value, method: &serde_yaml::Value, params: &Para
     std_fn = std_fn.replace("[function-name]", &function_name);
 
     if params.runtime == "nodejs" {
+
         let mut function_handler = String::new();
         function_handler.push_str("functions/");
         function_handler.push_str(&function_name);
+
         let mut function_file = function_handler.clone();
         function_file.push_str(".js");
         function_handler.push_str(".handler");    
         std_fn = std_fn.replace("[function-handler]", &function_handler);
+
         let mut node_fn_dest = String::new();
         node_fn_dest.push_str("output/");
         node_fn_dest.push_str(&function_file);
+
         let mut function_doc_path = String::from(FUNCTION_DOC_BASE_PATH);
         function_doc_path.push_str(&function_name);
         function_doc_path.push_str(".yml");
         std_fn = std_fn.replace("[function-doc-path]", &function_doc_path);
-        println!("{}", &function_doc_path);
+
         create_fn_doc_yaml(&function_doc_path).expect("Error creating function yaml doc file");
+        create_function_docs(yaml, &function_doc_path).expect("Error creating function docs");
         copy_template("node-function.js", &node_fn_dest).expect("Error copying the node function");
+
     } else if params.runtime == "csharp" {
         // TODO: implement csharp
     }
@@ -266,7 +339,7 @@ pub fn run(params: Params) -> Result<(), Box<dyn Error>> {
         println!("{}", e);
     }
 
-    parse_swagger(params)?;
+    parse_swagger(&params)?;
     
     Ok(())
 }
