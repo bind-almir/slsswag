@@ -192,7 +192,7 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
             doc.push_str("pathParameters:\n");
             for param in parameters {
                 if param["in"] == "path".to_string() {
-                    match &param["in"] {
+                    match &param["name"] {
                         serde_yaml::Value::String(value) => {
                             doc.push_str("  - name: ");
                             doc.push_str(&value);
@@ -211,7 +211,7 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
             doc.push_str("queryStringParameters:\n");
             for param in parameters {
                 if param["in"] == "query".to_string() {
-                    match &param["in"] {
+                    match &param["name"] {
                         serde_yaml::Value::String(value) => {
                             doc.push_str("  - name: ");
                             doc.push_str(&value);
@@ -249,25 +249,31 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
             for (code, response) in responses {
                 doc.push_str("-\n");
                 doc.push_str("  statusCode: ");
-                doc.push_str(code.as_str().unwrap());
-                doc.push_str("\n");
-                // doc.push_str("  description: ");
-                // doc.push_str(response["description"].as_str().unwrap());
-                // doc.push_str("\n");
-                
-                if response["schema"] != serde_yaml::Value::Null {
-                    let mut s = serde_yaml::to_string(&response["schema"])?;
-                    doc.push_str("  responseModels:");
-                    s = s.replace("\n", "\n    ");
-                    doc.push_str(&s);
-                    doc.push_str("\n");
-                    doc = doc.replace("---", "");
+                let mut code_str = code.as_str().unwrap().to_string();
+                if code_str == "default" {
+                    code_str.clear();
+                    code_str.push_str("200");
                 }
+                doc.push_str(code_str.as_str());
+                doc.push_str("\n");
+                doc.push_str("  description: ");
+                doc.push_str(response["description"].as_str().unwrap());
+                doc.push_str("\n");
+
+                // TODO: parse response models properly
+                // if response["schema"] != serde_yaml::Value::Null {
+                //     let mut s = serde_yaml::to_string(&response["schema"])?;
+                //     doc.push_str("  responseModels:");
+                //     s = s.replace("\n", "\n    ");
+                //     doc.push_str(&s);
+                //     doc.push_str("\n");
+                //     doc = doc.replace("---", "");
+                // }
 
                 if response["headers"] != serde_yaml::Value::Null {
                     let mut s = serde_yaml::to_string(&response["headers"])?;
-                    doc.push_str("    headers:");
-                    s = s.replace("\n", "\n      ");
+                    doc.push_str("  headers:");
+                    s = s.replace("\n", "\n    ");
                     doc.push_str(&s);
                     doc.push_str("\n");
                     doc = doc.replace("---", "");
