@@ -8,15 +8,13 @@ provider:
 
 custom: 
 
-  # documentation:
-  #   api:
-  #     ${file(./docs/api.yml)}
-  #   models:
-  #     ${file(./docs/models.yml)}
+  documentation:
+    api:
+      ${file(./docs/api.yml)}
+    models:
+      ${file(./docs/models.yml)}
 
 plugins:
-  # TODO: setup documentation
-  # - serverless-v2-aws-documentation
-  - serverless-offline
+  - serverless-v2-aws-documentation
 
 functions:

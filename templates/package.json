@@ -6,10 +6,10 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "aws-sdk": "^2.1017.0",
+    "aws-sdk": "^2.1019.0",
     "jest": "^27.3.1",
-    "serverless-offline": "^5.10.1",
-    "serverless-v2-aws-documentation": "^2.0.3"
+    "serverless-offline": "^8.2.0",
+    "serverless-v2-aws-documentation": "^2.0.4"
   },
   "scripts": {
     "test": "jest"
