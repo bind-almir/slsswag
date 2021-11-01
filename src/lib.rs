@@ -173,10 +173,11 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
     doc.push_str("description: ");
     doc.push_str(method_value["description"].as_str().unwrap());
     doc.push_str("\n");
-    doc.push_str("tags: \n");
     
     match &method_value["tags"] {
         serde_yaml::Value::Sequence(tags) => {
+            doc.push_str("tags: \n");
+
             for tag in tags {
                 doc.push_str("  - ");
                 doc.push_str(tag.as_str().unwrap());
@@ -184,6 +185,44 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
             }
         },
         _ => {},
+    };
+
+    match &method_value["parameters"] {
+        serde_yaml::Value::Sequence(parameters) => {
+            doc.push_str("pathParameters:\n");
+            for param in parameters {
+                if param["in"] == "path".to_string() {
+                    match &param["in"] {
+                        serde_yaml::Value::String(value) => {
+                            doc.push_str("  - name: ");
+                            doc.push_str(&value);
+                            doc.push_str("\n");
+                        },
+                        _ => {},
+                    };
+                }
+            }
+        },
+        _ => {}
+    };
+
+    match &method_value["parameters"] {
+        serde_yaml::Value::Sequence(parameters) => {
+            doc.push_str("queryStringParameters:\n");
+            for param in parameters {
+                if param["in"] == "query".to_string() {
+                    match &param["in"] {
+                        serde_yaml::Value::String(value) => {
+                            doc.push_str("  - name: ");
+                            doc.push_str(&value);
+                            doc.push_str("\n");
+                        },
+                        _ => {},
+                    };
+                }
+            }
+        },
+        _ => {}
     };
 
     match method {
@@ -208,42 +247,42 @@ fn create_function_docs(yaml: Yaml, file: &str) -> Result<(), Box<dyn Error>> {
     match &method_value["responses"] {
         serde_yaml::Value::Mapping(responses) => {
             for (code, response) in responses {
-                doc.push_str("  ");
+                doc.push_str("-\n");
+                doc.push_str("  statusCode: ");
                 doc.push_str(code.as_str().unwrap());
-                doc.push_str(": \n");
-                doc.push_str("    description: ");
-                doc.push_str(response["description"].as_str().unwrap());
                 doc.push_str("\n");
+                // doc.push_str("  description: ");
+                // doc.push_str(response["description"].as_str().unwrap());
+                // doc.push_str("\n");
+                
                 if response["schema"] != serde_yaml::Value::Null {
                     let mut s = serde_yaml::to_string(&response["schema"])?;
-                    doc.push_str("    responseModels:");
+                    doc.push_str("  responseModels:");
+                    s = s.replace("\n", "\n    ");
+                    doc.push_str(&s);
+                    doc.push_str("\n");
+                    doc = doc.replace("---", "");
+                }
+
+                if response["headers"] != serde_yaml::Value::Null {
+                    let mut s = serde_yaml::to_string(&response["headers"])?;
+                    doc.push_str("    headers:");
                     s = s.replace("\n", "\n      ");
                     doc.push_str(&s);
                     doc.push_str("\n");
                     doc = doc.replace("---", "");
                 }
+
             }
         },
         _ => {},
     }
     
     doc = doc.replace("#/definitions/", "");
-    doc = doc.replace("$ref", "application/json");
+    doc = doc.replace("$ref", "\"application/json\"");
 
 
     write_output(&file, &doc)?;
-
-    //  TODO Add docs to functions 
-
-// pathParams:
-//   -
-//     name: "id"
-//     description: "The identifier child."
-//     required: true
-//   -
-//     name: "idParent"
-//     description: "The identifier parent."
-//     required: true
 
     Ok(())
 }
@@ -303,11 +342,14 @@ fn parse_yml(yaml: Yaml) -> String {
         let mut function_doc_path = String::from(FUNCTION_DOC_BASE_PATH);
         function_doc_path.push_str(&function_name);
         function_doc_path.push_str(".yml");
-        std_fn = std_fn.replace("[function-doc-path]", &function_doc_path);
-
         create_fn_doc_yaml(&function_doc_path).expect("Error creating function yaml doc file");
         create_function_docs(yaml, &function_doc_path).expect("Error creating function docs");
         copy_template("node-function.js", &node_fn_dest).expect("Error copying the node function");
+
+        function_doc_path = String::from("docs/functions/");
+        function_doc_path.push_str(&function_name);
+        function_doc_path.push_str(".yml");
+        std_fn = std_fn.replace("[function-doc-path]", &function_doc_path);
 
     } else if params.runtime == "csharp" {
         // TODO: implement csharp
