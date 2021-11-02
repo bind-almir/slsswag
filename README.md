@@ -1,4 +1,4 @@
-# slsswag
+## slsswag
 
 The idea comes from several projects that I was migrating to serverless architecture using Serverless framework. There is an existing OpenAPI specification, but there is no good way to migrate it to Serverless. You have to define all the endpoints over and over again which is a kind of redundant work. 
 
@@ -19,5 +19,8 @@ Sample folder contains [petstore swagger file](https://petstore.swagger.io/). On
 
 Suppose you have your legacy application with the OpenAPI specification. If you plan to migrate to the Serverless framework and run on AWS, export the file, then run the command against your file. 
 
-# Important note:
+## Important note:
 API Gateway documentation does not support `XML and` example` tags. Therefore you need to remove it from the generated Swagger (if any). 
+
+## License
+The source code for this project is released under the [MIT License](/LICENSE).
