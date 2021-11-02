@@ -1,26 +1,45 @@
 ## slsswag
 
-The idea comes from several projects that I was migrating to serverless architecture using Serverless framework. There is an existing OpenAPI specification, but there is no good way to migrate it to Serverless. You have to define all the endpoints over and over again which is a kind of redundant work. 
+CLI tool that generates the Serverless framework project from the Swagger (OpenAPI specification) file in milliseconds.
 
-Status: Experimental
-Note: Currently works only with yaml. JSON is planned to be added later.
+[Blog post with more information](https://almirzulic.com/posts/migrate-swagger-to-serverless/)
 
-Usage:
-- `slsswag sample/swagger.yml nodejs`
-- `slsswag sample/swagger.yml csharp`
+**Usage:**
+
+{{< highlight bash >}}
+slsswag path/to/swagger/file.yml platform` 
+{{< /highlight >}}
+
+{{< highlight bash >}}
+slsswag sample/swagger.yml nodejs
+{{< /highlight >}}
+
+{{< highlight bash >}}
+slsswag sample/swagger.yml csharp
+{{< /highlight >}}
 
 
-Sample folder contains [petstore swagger file](https://petstore.swagger.io/). Once the command is executed, the output folder will be created with the complete project ready to be deployed. The project is still under development but the NodeJS example works.
+**Note**: Currently works only with yaml. JSON is planned to be added later.
 
-1. `cargo run sample/swagger.yml nodejs`
+Sample folder contains [petstore](https://petstore.swagger.io) swagger file. When you execute the command, it will create the output folder with the complete project ready to be deployed. At the time of writing this article, the project is still under heavy development, but the NodeJS example works.
+
+The program parses a swagger file and converts it into a format acceptable by the documentation plugin. For NodeJS it will generate:
+
+- Full serverless.yml with plugins, functions, and doc configuration
+- package.json
+- Function files with the code in it
+- Tests for the functions (Jest)
+- Documentation for each function file
+- Models
+
+After running the command, you only need to execute `npm install` and your service is ready to be deployed. 
+
+1. `./slsswag sample/swagger.yml nodejs`
 2. `cd output`
 3. `npm i`
 4. `sls deploy`
 
-Suppose you have your legacy application with the OpenAPI specification. If you plan to migrate to the Serverless framework and run on AWS, export the file, then run the command against your file. 
-
-## Important note:
-API Gateway documentation does not support `XML and` example` tags. Therefore you need to remove it from the generated Swagger (if any). 
+One more important note is that API Gateway documentation does not support `xml` and `example` tags. Therefore you need to remove it from the generated Swagger, if any. Removing those tags is on a roadmap, but you have to do it on your own for now.
 
 ## License
 The source code for this project is released under the [MIT License](/LICENSE).
