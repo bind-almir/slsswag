@@ -6,18 +6,17 @@ CLI tool that generates the Serverless framework project from the Swagger (OpenA
 
 **Usage:**
 
-{{< highlight bash >}}
-slsswag path/to/swagger/file.yml platform` 
-{{< /highlight >}}
+```
+slsswag path/to/swagger/file.yml platform
+```
 
-{{< highlight bash >}}
+```
 slsswag sample/swagger.yml nodejs
-{{< /highlight >}}
+```
 
-{{< highlight bash >}}
+```
 slsswag sample/swagger.yml csharp
-{{< /highlight >}}
-
+```
 
 **Note**: Currently works only with yaml. JSON is planned to be added later.
 
