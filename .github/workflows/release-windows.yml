@@ -26,4 +26,4 @@ jobs:
           prerelease: true
           files: |
             LICENSE.txt
-            ./target/release/slsswag
+            ./target/release/slsswag.exe
