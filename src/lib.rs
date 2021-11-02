@@ -8,6 +8,7 @@ use regex::Regex;
 
 const OUTPUT: &str = "output/serverless.yml";
 const FUNCTION_DOC_BASE_PATH: &str = "output/docs/functions/";
+const TESTS_BASE_PATH: &str = "output/tests/";
 
 #[derive(RustEmbed)]
 #[folder = "templates/"]
@@ -145,7 +146,7 @@ fn create_models_yml(definitions: &serde_yaml::Value) -> Result<(), Box<dyn Erro
 }
 
 
-fn create_fn_doc_yaml(file: &str) -> Result<(), Box<dyn Error>> {
+fn create_file(file: &str) -> Result<(), Box<dyn Error>> {
     File::create(file)?;
     Ok(())
 }
@@ -341,16 +342,28 @@ fn parse_yml(yaml: Yaml) -> String {
         function_handler.push_str(".handler");    
         std_fn = std_fn.replace("[function-handler]", &function_handler);
 
+        // nodejs function file destination path
         let mut node_fn_dest = String::new();
         node_fn_dest.push_str("output/");
         node_fn_dest.push_str(&function_file);
+        copy_template("node-function.js", &node_fn_dest).expect("Error copying the node function");
 
+        // nodejs function test destination path
+        let mut node_test_dest = String::new();
+        node_test_dest.push_str(TESTS_BASE_PATH);
+        node_test_dest.push_str(&function_name);
+        node_test_dest.push_str(".test");
+        node_test_dest.push_str(".js");
+        let mut test_content = read_template("node-test.js");
+        test_content = test_content.replace("[function-name]", &function_file);
+        create_file(&node_test_dest).expect("Error creating function test file");
+        write_output(&node_test_dest, &test_content).expect("Error writing content to function test file");
+        // nodejs function docs destination path
         let mut function_doc_path = String::from(FUNCTION_DOC_BASE_PATH);
         function_doc_path.push_str(&function_name);
         function_doc_path.push_str(".yml");
-        create_fn_doc_yaml(&function_doc_path).expect("Error creating function yaml doc file");
+        create_file(&function_doc_path).expect("Error creating function yaml doc file");
         create_function_docs(yaml, &function_doc_path).expect("Error creating function docs");
-        copy_template("node-function.js", &node_fn_dest).expect("Error copying the node function");
 
         function_doc_path = String::from("docs/functions/");
         function_doc_path.push_str(&function_name);
@@ -384,7 +397,8 @@ fn write_output(path: &str, content: &str) -> Result<(), Box<dyn Error>> {
 fn setup_output() -> Result<(), Box<dyn Error>> {
     fs::create_dir_all("./output/functions")?;
     fs::create_dir_all("./output/helpers")?;
-    fs::create_dir_all("./output/docs/functions")?;
+    fs::create_dir_all(FUNCTION_DOC_BASE_PATH)?;
+    fs::create_dir_all(TESTS_BASE_PATH)?;
     File::create(OUTPUT)?;
     Ok(())
 }
