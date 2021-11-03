@@ -38,7 +38,7 @@ After running the command, you only need to execute `npm install` and your servi
 3. `npm i`
 4. `sls deploy`
 
-One more important note is that API Gateway documentation does not support `xml` and `example` tags. Therefore you need to remove it from the generated Swagger, if any. Removing those tags is on a roadmap, but you have to do it on your own for now.
+One more important note is that API Gateway documentation does not support `xml` and `example` tags. Therefore you need to remove it from the generated docs, if any. Removing those tags is on a roadmap, but you have to do it on your own for now.
 
 ## License
 The source code for this project is released under the [MIT License](/LICENSE).
