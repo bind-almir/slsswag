@@ -7,4 +7,7 @@ provider:
   runtime: dotnetcore3.1
   lambdaHashingVersion: 20201221
 
+package:
+  individually: true
+
 functions:
